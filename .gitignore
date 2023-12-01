@@ -359,3 +359,6 @@ MigrationBackup/
 
 # Visual studio code config
 .vscode/
+
+# C output files
+*.out
