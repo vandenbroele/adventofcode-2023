@@ -362,3 +362,6 @@ MigrationBackup/
 
 # C output files
 *.out
+
+# input files
+*input.txt
