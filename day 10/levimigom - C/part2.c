@@ -53,6 +53,12 @@ void find_tile_connected_to_start(char maze[DIM][DIM], int rows, int cols, int s
 }
 
 int count_enclosed_tiles(char maze[DIM][DIM], int rows, int cols, bool **visited){
+	// you can know which tiles are inside, and which tiles are outside the loop
+	// by counting the number of walls in a particular row.
+	// the only problem here is that depending on the position of your start S
+	// it could be a wall or not, in my case it wasnt so i hardcoded it as not
+	// but it would be better to just replace the S by the corresponding pipe before you start
+
 	int i, j;
 	
 	int *row_pipe_count = calloc(sizeof(int), rows);
@@ -73,8 +79,6 @@ int count_enclosed_tiles(char maze[DIM][DIM], int rows, int cols, bool **visited
 			} else {
 				printf("P");
 
-				// depending on the position of the start 'S', it can be a vertical wall
-				// if it is, then you need to add it to the below if case, in my case it wasnt so i left it out
 				if(maze[i][j] == '|' || maze[i][j] == '7' || maze[i][j] == 'F'){
 					row_pipe_count[i]++;
 				}
