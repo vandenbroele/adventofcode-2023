@@ -145,7 +145,7 @@ internal class ModuleManager {
 		}
 	}
 	
-	public long CalculateFewestButtonPresses(string destination){
+	public void CalculateFewestButtonPresses(string destination){
 		List<string> sources = _sources[destination];
 		int previous, presses = 0;
 		long total = -1;
@@ -156,55 +156,21 @@ internal class ModuleManager {
 				presses++;
 			}
 			previous = presses;
-			
-			Console.WriteLine($"\t{source} sends high pulse after {presses} presses");
-
-			while(!PressButton(source, destination)){
-				presses++;
-			}
-			previous = presses;
-
-			Console.WriteLine($"\t{source} sends high pulse after {presses} presses");
-
-			while (!PressButton(source, destination)) {
-				presses++;
-			}
-			previous = presses;
-
-			Console.WriteLine($"\t{source} sends high pulse after {presses} presses");
-
-			while (!PressButton(source, destination)) {
-				presses++;
-			}
-			previous = presses;
-
-			Console.WriteLine($"\t{source} sends high pulse after {presses} presses");
-
-			while (!PressButton(source, destination)) {
-				presses++;
-			}
-			previous = presses;
-
-			Console.WriteLine($"\t{source} sends high pulse after {presses} presses");
-
 
 			while (!PressButton(source, destination)) {
 				presses++;
 			}
 
-			Console.WriteLine($"\t{source} sends high pulse after {presses} presses");
-			Console.WriteLine($"Cycle length for source {source} = {presses - previous}");
+			Console.WriteLine($"Cycle length for source {source} = {presses - previous + 1}");
 			
 			if(total == -1){
-				total = presses - previous;
+				total = presses - previous + 1;
 			} else {
-				total *= presses - previous;
+				total *= presses - previous + 1;
 			}
 		}
-		
-		total.Dump();
-		
-		return 0;
+
+		Console.WriteLine($"Total button presses before a high pulse is sent from {destination} => {total}");
 	}
 
 	public bool PressButton(string requiredSource, string requiredDestination){
