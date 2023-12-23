@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #define NAME_LEN 4
 #define TRIE_SIZE 'z' + 1
-#define ACCEPTED "A"
-#define REJECTED "R"
 
 struct rule {
 	char input, operator, output[NAME_LEN];
@@ -175,25 +173,20 @@ struct range {
 	int min['x' + 1], max['x' + 1];
 };
 
-int max(int a, int b){ return(a < b ? b : a); }
-
 long calculate_combinations(struct range *range){
-	printf("Found an accepted range: ");
-
 	long combinations = 1;
 	int i;
 
 	for(i = 0; i < 4; i++){
-		printf("%c between %4d and %4d\t", "xmas"[i], range->min["xmas"[i]], range->max["xmas"[i]]);
-		combinations *= max(0, range->max["xmas"[i]] - range->min["xmas"[i]] + 1);
+		combinations = combinations * (range->max["xmas"[i]] - range->min["xmas"[i]] + 1);
 	}
-	printf("\n%ld combinations\n", combinations);
 
 	return combinations;
 }
 
-long calculate_total_combinations(struct trie *trie, char *workflow_name, int rule_number, struct range *range){
+long calculate_total_combinations(struct trie *trie, char *workflow_name, int rule_number, struct range *range, int depth){
 	if(workflow_name[0] == 'R'){
+		calculate_combinations(range);
 		return 0;
 	}	
 
@@ -206,45 +199,68 @@ long calculate_total_combinations(struct trie *trie, char *workflow_name, int ru
 
 	if(rule->is_default){
 		// default, no need to adjust range
-		return calculate_total_combinations(trie, rule->output, 0, range);
+		return calculate_total_combinations(trie, rule->output, 0, range, depth + 1);
 	}
 
 	long combinations = 0;
 	int placeholder;
 
 	if(rule->operator == '<'){
+		// current range is < rule then the range is already correct
+		// continue to next workflow described by current rule
 		if(range->max[rule->input] < rule->value){
-			// the range is already small enough
-			combinations += calculate_total_combinations(trie, rule->output, 0, range);
-		} else {
+			combinations = calculate_total_combinations(trie, rule->output, 0, range, depth + 1);
+		} 
+		// rule < current range
+		// we cannot accept the current rule, continue to next rule
+		else if(rule->value <= range->min[rule->input]){
+			combinations = calculate_total_combinations(trie, workflow_name, rule_number + 1, range, depth + 1);
+		}
+		// otherwise, split range in two parts and calculate the possiblities for each range
+		else {
+			// if we get here we know that the range->min < rule->value <= range->max
+			// so we need to split the range in two parts,
+			// one where the rule accepted (new range = range->min -> rule->value - 1)
+			// and one where the rule is rejected (new range = rule->value -> range->max)
+
+			// accepted rule (adjust range to range_min -> rule->value - 1)
 			placeholder = range->max[rule->input];
-
-			// adjust range to new maximum and go to the next workflow
 			range->max[rule->input] = rule->value - 1;
-			combinations += calculate_total_combinations(trie, rule->output, 0, range);
-
-			// adjust range to new minimum and go to the next rule in the current workflow
+			combinations += calculate_total_combinations(trie, rule->output, 0, range, depth + 1);
 			range->max[rule->input] = placeholder;
+
+			// rejected rule (adjust range to rule->value -> range_max)
+			placeholder = range->min[rule->input];
 			range->min[rule->input] = rule->value;
-			combinations += calculate_total_combinations(trie, rule->output, 1, range);
+			combinations += calculate_total_combinations(trie, workflow_name, rule_number + 1, range, depth + 1);
+			range->min[rule->input] = placeholder;
 		}
 	}
 
-	if(rule->operator == '>'){
+	else if(rule->operator == '>'){
+		// current range is > rule then the range is already correct
+		// continue to the next workflow described by the current rule
 		if(rule->value < range->min[rule->input]){
-			// the range is already small enough
-			combinations += calculate_total_combinations(trie, rule->output, 0, range);
-		} else {
+			combinations = calculate_total_combinations(trie, rule->output, 0, range, depth + 1);
+		}	
+		// current range <= rule
+		// we cannot accept this rule, continue to next rule
+		else if(range->max[rule->input] <= rule->value){
+			combinations = calculate_total_combinations(trie, workflow_name, rule_number + 1, range, depth + 1);
+		} 
+		// otherwise, split range in two parts and calculate the posssibilites for each range
+		else {	
+			// accepted rule
 			placeholder = range->min[rule->input];
-
-			// adjust range to new minimum and go to the next workflow
 			range->min[rule->input] = rule->value + 1;
-			combinations += calculate_total_combinations(trie, rule->output, 0, range);
-
-			// adjust range to new maximum and go to the next rule in the current workflow
+			combinations += calculate_total_combinations(trie, rule->output, 0, range, depth + 1);
 			range->min[rule->input] = placeholder;
+
+			// rejected rule
+			placeholder = range->max[rule->input];
 			range->max[rule->input] = rule->value;
-			combinations += calculate_total_combinations(trie, rule->output, 1, range);
+			combinations += calculate_total_combinations(trie, workflow_name, rule_number + 1, range, depth + 1);
+			range->max[rule->input] = placeholder;
 		}
 	}
 
@@ -265,7 +281,7 @@ void solve(){
 	struct range *range = malloc(sizeof(struct range));
 	range->min['x'] = range->min['m'] = range->min['a'] = range->min['s'] = 1;
 	range->max['x'] = range->max['m'] = range->max['a'] = range->max['s'] = 4000;
-	printf("%ld\n", calculate_total_combinations(trie, "in", 0, range));
+	printf("%ld\n", calculate_total_combinations(trie, "in", 0, range, 0));
 	// free memory
 	free_trie(trie);
 	free(range);
