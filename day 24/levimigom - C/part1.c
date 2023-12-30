@@ -8,7 +8,7 @@
 #define MAX_Y 400000000000000
 
 struct hailstone {
-	long px, py, vx, vy, ex, ey;
+	long px, py, vx, vy;
 };
 
 long my_atoi(char *s){
@@ -32,27 +32,6 @@ long my_atoi(char *s){
 	return value;
 }
 
-long min(int a, int b) { return(a < b ? a : b); }
-
-void calculate_line_end(struct hailstone *hailstone){
-	long times;
-
-	if(hailstone->vx < 0){
-		times = (hailstone->px - MIN_X) / (-hailstone->vx);
-	} else {
-		times = (MAX_X - hailstone->px) / hailstone->vx;
-	}
-
-	if(hailstone->vy < 0){
-		times = min(times, (hailstone->py - MIN_Y) / (-hailstone->vy));
-	} else {
-		times = min(times, (MAX_Y - hailstone->py) / hailstone->vy);
-	}
-
-	hailstone->ex = hailstone->px + (times * hailstone->vx);
-	hailstone->ey = hailstone->py + (times * hailstone->vy);
-}
-
 struct hailstone *read_hailstone(){
 	char s[4][MAX_DIGITS];
 
@@ -65,7 +44,6 @@ struct hailstone *read_hailstone(){
 	stone->py = my_atoi(s[1]);
 	stone->vx = my_atoi(s[2]);
 	stone->vy = my_atoi(s[3]);
-	calculate_line_end(stone);
 	
 	return stone;
 }
@@ -97,41 +75,39 @@ void free_hailstones(struct hailstone **hailstones, int hailstone_count){
 	free(hailstones);
 }
 
-// TODO: incorrect because the multiplication overflows
-bool lines_intersect(long double p0_x, long double p0_y, long double p1_x, long double p1_y, long double p2_x, long double p2_y, long double p3_x, long double p3_y, double *i_x, double *i_y){
-    long double s1_x, s1_y, s2_x, s2_y;
-    s1_x = p1_x - p0_x;
-    s1_y = p1_y - p0_y;
-    s2_x = p3_x - p2_x;
-    s2_y = p3_y - p2_y;
+bool stones_intersect(struct hailstone *a, struct hailstone *b, long double *intersection_x, long double *intersection_y){
+	long double dx = b->px - a->px;
+    	long double dy = b->py - a->py;
+	long double det = (b->vx * a->vy) - (b->vy * a->vx);
+	
+	if(det != 0){
+		long double u = (dy * b->vx - dx * b->vy) / det;
+		long double v = (dy * a->vx - dx * a->vy) / det;
 
-    long double s, t;
-    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
-    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+		if(0 <= u && 0 <= v){
+			*intersection_x = a->px + (u * a->vx);
+			*intersection_y = a->py + (u * a->vy);
+		       return true;	
+		}
+	}
 
-    if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
-    {
-	if (i_x != NULL)
-            *i_x = p0_x + (t * s1_x);
-        if (i_y != NULL)
-            *i_y = p0_y + (t * s1_y);
-        return true;
-    }
-
-    return false;
-}
-
+	return false;
+}	
+	
 int count_intersections(struct hailstone **hailstones, int hailstone_count){
 	int i, j, count;
-	double intersect_x, intersect_y;
+	long double intersect_x, intersect_y;
 	
 	count = 0;
 	for(i = 0; i < hailstone_count; i++){
 		for(j = i + 1; j < hailstone_count; j++){
-			if(lines_intersect(hailstones[i]->px, hailstones[i]->py, hailstones[i]->ex, hailstones[i]->ey,
-						hailstones[j]->px, hailstones[j]->py, hailstones[j]->ex, hailstones[j]->ey, &intersect_x, &intersect_y)){
-				printf("Line %d and %d intersect at position %lf,%lf!\n", i, j, intersect_x, intersect_y);
-				count++;
+			if(stones_intersect(hailstones[i], hailstones[j], &intersect_x, &intersect_y)){
+				if(MIN_X <= intersect_x && intersect_x <= MAX_X && MIN_Y <= intersect_y && intersect_y <= MAX_Y){
+					count++;
+					printf("Line %d and %d intersect at position %Lf,%Lf within the search space!\n", i, j, intersect_x, intersect_y);
+				} else {
+					printf("Line %d and %d intersect outside of the search space!\n", i, j);
+				}
 			}
 		}
 	}
